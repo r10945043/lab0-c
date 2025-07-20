@@ -152,31 +152,13 @@ void q_swap(struct list_head *head)
     // https://leetcode.com/problems/swap-nodes-in-pairs/
     if (!head || list_empty(head) || list_is_singular(head))
         return;
-    struct list_head *slow, *fast;
-    slow = fast = head->next;
-    // If the number of nodes is odd, than leave the last node in its
-    // original position.
-    for (fast = fast->next; fast != head && fast->next != head;
-         fast = fast->next->next) {
-        // 1. slow points to first node, fast points to second node.
-        // 2. record prev, next of current pairs.
-        // 3. swap(slow, fast).
-        // 4. prev->next = first, first->prev = prev,
-        //    first->next = second, second->prev = first,
-        //    second->next = next, next->prev = second.
-        struct list_head *prev = slow->prev;
-        struct list_head *next = fast->next;
-        struct list_head *tmp = slow;
-        slow = fast;
-        fast = tmp;
-        prev->next = fast;
-        fast->prev = prev;
-        fast->next = slow;
-        slow->prev = fast;
-        slow->next = next;
-        next->prev = slow;
-        fast = slow;
-        slow = next;
+    struct list_head *first, *second, *prev;
+    prev = head;
+    first = second = head->next;
+    for (second = first->next; first != head && first->next != head;
+         first = first->next, second = first->next) {
+        list_move(second, prev);
+        prev = first;
     }
 }
 
