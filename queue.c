@@ -130,19 +130,32 @@ bool q_delete_dup(struct list_head *head)
         return false;
     if (list_is_singular(head))
         return true;
-    char *curr_str = list_first_entry(head, element_t, list)->value;
-    struct list_head *next, *curr;
-    curr = head->next;
-    for (next = curr->next; next != head; next = curr->next) {
-        if (strcmp(list_entry(next, element_t, list)->value, curr_str) == 0) {
-            element_t *victim = list_entry(next, element_t, list);
-            list_del(next);
-            free(victim);
-        } else {
-            curr = curr->next;
-            curr_str = list_entry(curr, element_t, list)->value;
+    // Init delete_queue_head.
+    struct list_head *delete_queue_head = q_new();
+    element_t *curr_compared = list_first_entry(head, element_t, list);
+    struct list_head *last = head;
+    for (struct list_head *curr = head->next->next; curr != head;
+         curr = curr->next) {
+        // if del_first == true, then delete last->next node.
+        bool del_first = false;
+        for (; curr != head && strcmp(list_entry(curr, element_t, list)->value,
+                                      curr_compared->value) == 0;) {
+            del_first = true;
+            struct list_head *tmp_ = curr->next;
+            list_move(curr, delete_queue_head);
+            curr = tmp_;
         }
+        if (del_first) {
+            struct list_head *tmp = last->next->next;
+            list_move(last->next, delete_queue_head);
+            last = tmp->prev;
+        } else
+            last = curr->prev;
+        if (curr == head)
+            break;
+        curr_compared = list_entry(curr, element_t, list);
     }
+    q_free(delete_queue_head);
     return true;
 }
 
@@ -289,33 +302,25 @@ int q_ascend(struct list_head *head)
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
     if (!head || list_empty(head) || list_is_singular(head))
         return 0;
-    size_t org_queue_size = q_size(head);
-    size_t del_cnt = 0;
-    /* element_t->value is of char* type! */
+
     q_reverse(head);
-    struct list_head **tmp, *cprd, *next;
-    tmp = &(head)->next;
-    for (; *tmp;) {
-        cprd = (*tmp)->next;
-        if (!cprd)
-            break;
-        next = cprd->next;
-        if (strcmp(list_entry(*tmp, element_t, list)->value,
-                   list_entry(cprd, element_t, list)->value) > 0) {
-            /* cprd node needs to be deleted. */
-            (*tmp)->next = next;
-            if (next)
-                next->prev = *tmp;
-            element_t *victim = list_entry(cprd, element_t, list);
-            list_del(cprd);
-            free(victim);
-            del_cnt++;
-            continue;
+
+    char *max_value = NULL;
+    struct list_head *node, *safe;
+
+    list_for_each_safe(node, safe, head) {
+        element_t *e = list_entry(node, element_t, list);
+        if (!max_value || strcmp(e->value, max_value) < 0)
+            max_value = e->value;
+        else {
+            list_del(node);
+            free(e->value);
+            free(e);
         }
-        *tmp = (*tmp)->next;
     }
+
     q_reverse(head);
-    return org_queue_size - del_cnt;
+    return q_size(head);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
@@ -325,33 +330,25 @@ int q_descend(struct list_head *head)
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
     if (!head || list_empty(head) || list_is_singular(head))
         return 0;
-    size_t org_queue_size = q_size(head);
-    size_t del_cnt = 0;
-    /* element_t->value is of char* type! */
+
     q_reverse(head);
-    struct list_head **tmp, *cprd, *next;
-    tmp = &(head)->next;
-    for (; *tmp;) {
-        cprd = (*tmp)->next;
-        if (!cprd)
-            break;
-        next = cprd->next;
-        if (strcmp(list_entry(*tmp, element_t, list)->value,
-                   list_entry(cprd, element_t, list)->value) < 0) {
-            /* cprd node needs to be deleted. */
-            (*tmp)->next = next;
-            if (next)
-                next->prev = *tmp;
-            element_t *victim = list_entry(cprd, element_t, list);
-            list_del(cprd);
-            free(victim);
-            del_cnt++;
-            continue;
+
+    char *max_value = NULL;
+    struct list_head *node, *safe;
+
+    list_for_each_safe(node, safe, head) {
+        element_t *e = list_entry(node, element_t, list);
+        if (!max_value || strcmp(e->value, max_value) > 0)
+            max_value = e->value;
+        else {
+            list_del(node);
+            free(e->value);
+            free(e);
         }
-        *tmp = (*tmp)->next;
     }
+
     q_reverse(head);
-    return org_queue_size - del_cnt;
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
