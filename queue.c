@@ -208,26 +208,30 @@ void q_reverseK(struct list_head *head, int k)
     if (!head || list_empty(head) || list_is_singular(head) || k == 1)
         return;
 
-    struct list_head *start, *end, *prev = NULL;
-    start = end = head->next;
-    for (; end != head;) {
-        for (int i = 0; end != head && i < k - 1; ++i, end = end->next)
-            ;
-        struct list_head *next_list_head = end->next;
-        end->next = NULL;
-        struct list_head *reversed = q_reverse_partial(start);
-        // Need to record the last element of last group.
-        if (start == head->next) {
-            head->next = reversed;
-            reversed->prev = head;
-        } else {
-            reversed->prev = prev;
-            prev->next = reversed;
+    // Call list_move(node, last) on nodes in the intervals.
+    // last node will be updated at the end of each intervals.
+    struct list_head *last = head;
+    struct list_head *node = NULL, *safe = NULL;
+
+    int num_intervals = q_size(head) / k;
+
+    int cnt = 0;
+    // head -> e -> d -> b -> a -> head
+    list_for_each_safe(node, safe, head) {
+        // node points to e, safe points to d
+        // last points to head
+        if (cnt == num_intervals)
+            break;
+
+        for (int i = 0; i < k; ++i) {
+            list_move(node, last);
+            node = safe;        // node points to b
+            safe = node->next;  // safe points to a
         }
-        start->next = next_list_head;
-        next_list_head->prev = start;
-        prev = start;
-        start = end = next_list_head;
+
+        cnt++;
+        last = node->prev;
+        safe = node;
     }
 }
 
