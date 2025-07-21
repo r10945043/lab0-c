@@ -185,22 +185,6 @@ void q_reverse(struct list_head *head)
         list_move(node, head);
 }
 
-struct list_head *q_reverse_partial(struct list_head *head)
-{
-    struct list_head *prev = NULL, *next;
-    while (head) {
-        next = head->next;
-        head->next = prev;
-        next->next = head;
-        head->prev = next;
-        if (prev)
-            prev->prev = head;
-        prev = head;
-        head = next;
-    }
-    return prev;
-}
-
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
