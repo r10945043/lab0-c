@@ -21,13 +21,11 @@ void q_free(struct list_head *head)
 {
     if (!head)
         return;
-    struct list_head *node, *safe;
-    list_for_each_safe(node, safe, head) {
-        list_del_init(node);
-        free(list_entry(node, element_t, list)->value);
-        free(list_entry(node, element_t, list));
+    element_t *entry = NULL, *safe = NULL;
+    list_for_each_entry_safe(entry, safe, head, list) {
+        free(entry->value);
+        free(entry);
     }
-    list_del_init(head);
     free(head);
 }
 
@@ -348,19 +346,20 @@ int q_merge(struct list_head *head, bool descend)
     if (!head || list_empty(head))
         return 0;
     if (list_is_singular(head))
-        return list_entry(head->next, queue_contex_t, chain)->size;
-    struct list_head *first_queue =
-        list_entry(head->next, queue_contex_t, chain)->q;
+        return list_first_entry(head, queue_contex_t, chain)->size;
 
-    struct list_head *queue_ptr = head->next->next;
-    while (queue_ptr != head) {
-        struct list_head *curr_queue =
-            list_entry(queue_ptr, queue_contex_t, chain)->q;
-        list_splice_init(curr_queue, first_queue);
-        list_entry(queue_ptr, queue_contex_t, chain)->size = 0;
-        queue_ptr = queue_ptr->next;
+    queue_contex_t *first = list_first_entry(head, queue_contex_t, chain);
+    queue_contex_t *tmp = NULL;
+
+    list_for_each_entry(tmp, head, chain) {
+        if (tmp == first)
+            continue;
+
+        list_splice_init(tmp->q, first->q);
+        first->size += tmp->size;
+        tmp->size = 0;
     }
-    q_sort(first_queue, descend);
-    list_entry(first_queue, queue_contex_t, chain)->size = q_size(first_queue);
-    return list_entry(first_queue, queue_contex_t, chain)->size;
+
+    q_sort(first->q, descend);
+    return first->size;
 }
